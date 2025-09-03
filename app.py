@@ -932,29 +932,29 @@ def api_history():
     today = datetime.now(tz=EGYPT_TZ).date()
     seven_days_ago = today - timedelta(days=6)  # including today = 7 days
 
-# Function to classify into one of 5 bins
-def classify_range(size_range_str):
-    numbers = [int(num) for num in re.findall(r'\d+', size_range_str)]
-    if not numbers:
-        return None
-    if len(numbers) == 1:
-        val = numbers[0]
-        if "<" in size_range_str:
-            return "<30mm" if val == 30 else None
-        if ">" in size_range_str:
-            return ">150mm" if val == 150 else None
-        return None
-    low, high = numbers[0], numbers[-1]
-    if high <= 30:
-        return "<30mm"
-    elif 30 < high <= 50:
-        return "30-50mm"
-    elif 50 < high <= 80:
-        return "50-80mm"
-    elif 80 < high <= 150:
-        return "80-150mm"
-    else:
-        return ">150mm"
+    # Function to classify into one of 5 bins
+    def classify_range(size_range_str):
+        numbers = [int(num) for num in re.findall(r'\d+', size_range_str)]
+        if not numbers:
+            return None
+        if len(numbers) == 1:
+            val = numbers[0]
+            if "<" in size_range_str:
+                return "<30mm" if val == 30 else None
+            if ">" in size_range_str:
+                return ">150mm" if val == 150 else None
+            return None
+        low, high = numbers[0], numbers[-1]
+        if high <= 30:
+            return "<30mm"
+        elif 30 < high <= 50:
+            return "30-50mm"
+        elif 50 < high <= 80:
+            return "50-80mm"
+        elif 80 < high <= 150:
+            return "80-150mm"
+        else:
+            return ">150mm"
 
     with get_db_conn() as conn:
         with conn.cursor() as cur:
