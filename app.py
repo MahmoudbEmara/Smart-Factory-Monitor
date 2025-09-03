@@ -854,23 +854,47 @@ def history():
             data: {
               labels: data.dates,
               datasets: [
-                {
-                  label: 'Small (<= 50mm) %',
-                  data: data.small,
-                  borderColor: 'rgba(75, 192, 192, 1)',
-                  backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                  fill: false,
-                  tension: 0.2
-                },
-                {
-                  label: 'Large (> 50mm) %',
-                  data: data.large,
-                  borderColor: 'rgba(255, 99, 132, 1)',
-                  backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                  fill: false,
-                  tension: 0.2
-                }
-              ]
+                  {
+                    label: '<30mm',
+                    data: data["<30mm"],
+                    borderColor: '#1f77b4',
+                    backgroundColor: 'rgba(31, 119, 180, 0.2)',
+                    fill: false,
+                    tension: 0.2
+                  },
+                  {
+                    label: '30-50mm',
+                    data: data["30-50mm"],
+                    borderColor: '#ff7f0e',
+                    backgroundColor: 'rgba(255, 127, 14, 0.2)',
+                    fill: false,
+                    tension: 0.2
+                  },
+                  {
+                    label: '50-80mm',
+                    data: data["50-80mm"],
+                    borderColor: '#2ca02c',
+                    backgroundColor: 'rgba(44, 160, 44, 0.2)',
+                    fill: false,
+                    tension: 0.2
+                  },
+                  {
+                    label: '80-150mm',
+                    data: data["80-150mm"],
+                    borderColor: '#d62728',
+                    backgroundColor: 'rgba(214, 39, 40, 0.2)',
+                    fill: false,
+                    tension: 0.2
+                  },
+                  {
+                    label: '>150mm',
+                    data: data[">150mm"],
+                    borderColor: '#9467bd',
+                    backgroundColor: 'rgba(148, 103, 189, 0.2)',
+                    fill: false,
+                    tension: 0.2
+                  }
+                ]
             },
             options: {
               responsive: true,
@@ -908,6 +932,30 @@ def api_history():
     today = datetime.now(tz=EGYPT_TZ).date()
     seven_days_ago = today - timedelta(days=6)  # including today = 7 days
 
+# Function to classify into one of 5 bins
+def classify_range(size_range_str):
+    numbers = [int(num) for num in re.findall(r'\d+', size_range_str)]
+    if not numbers:
+        return None
+    if len(numbers) == 1:
+        val = numbers[0]
+        if "<" in size_range_str:
+            return "<30mm" if val == 30 else None
+        if ">" in size_range_str:
+            return ">150mm" if val == 150 else None
+        return None
+    low, high = numbers[0], numbers[-1]
+    if high <= 30:
+        return "<30mm"
+    elif 30 < high <= 50:
+        return "30-50mm"
+    elif 50 < high <= 80:
+        return "50-80mm"
+    elif 80 < high <= 150:
+        return "80-150mm"
+    else:
+        return ">150mm"
+
     with get_db_conn() as conn:
         with conn.cursor() as cur:
             # Existing aggregation query
@@ -935,10 +983,12 @@ def api_history():
 
             
     # Initialize a dict to hold counts per day
+    categories = ["<30mm", "30-50mm", "50-80mm", "80-150mm", ">150mm"]
+    
     day_data = {}
     for i in range(7):
         day = seven_days_ago + timedelta(days=i)
-        day_data[day] = {"small": 0, "large": 0}
+        day_data[day] = {cat: 0 for cat in categories}
 
     # Aggregate counts
     for day, size_range, total_count in rows:
@@ -950,51 +1000,47 @@ def api_history():
         # Extract all numbers from the string, as a list of ints
         numbers = [int(num) for num in re.findall(r'\d+', size_range_clean)]
 
-        classification = "large"  # default
+        #classification = "large"  # default
 
-        if numbers:
+        #if numbers:
             # For '>30mm', numbers = [30]
             # For '30-50mm', numbers = [30, 50]
             # Logic: if the upper bound or the average is <= 50, classify as small
 
             # If only one number, like >30, check if it's <= 50
-            if len(numbers) == 1:
-                if numbers[0] <= 50:
-                    classification = "small"
-            else:
-                # multiple numbers (e.g., 30 and 50), take average
-                avg = sum(numbers) / len(numbers)
-                if avg <= 50:
-                    classification = "small"
-
-        if day in day_data:
+            #if len(numbers) == 1:
+            #    if numbers[0] <= 50:
+            #        classification = "small"
+            #else:
+            #    # multiple numbers (e.g., 30 and 50), take average
+            #    avg = sum(numbers) / len(numbers)
+            #    if avg <= 50:
+            #       classification = "small"
+       
+        classification = classify_range(size_range_clean)
+        if classification and day in day_data:
             day_data[day][classification] += total_count
 
     # Prepare data for JSON response
     dates = []
-    small_percents = []
-    large_percents = []
+    category_percents = {cat: [] for cat in categories}
 
     for day in sorted(day_data.keys()):
-        small_count = day_data[day]["small"]
-        large_count = day_data[day]["large"]
-        total = small_count + large_count
-        if total > 0:
-            small_pct = round((small_count / total) * 100, 2)
-            large_pct = round((large_count / total) * 100, 2)
+    totals = day_data[day]
+    total_count = sum(totals.values())
+    dates.append(day.strftime("%d/%m/%y"))
+    for cat in categories:
+        if total_count > 0:
+            pct = round((totals[cat] / total_count) * 100, 2)
         else:
-            small_pct = 0
-            large_pct = 0
-        dates.append(day.strftime("%d/%m/%y"))
-        small_percents.append(small_pct)
-        large_percents.append(large_pct)
-
-    return jsonify({
-        "dates": dates,
-        "small": small_percents,
-        "large": large_percents,
-        "last_updated": last_updated
-    })
+            pct = 0
+        category_percents[cat].append(pct)
+    
+    response = { "dates": dates, "last_updated": last_updated}
+    for cat in categories:
+        response[cat] = category_percents[cat]
+    
+    return jsonify(response)
 
 
 if __name__ == '__main__':
