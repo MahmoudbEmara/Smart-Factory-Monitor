@@ -1026,15 +1026,15 @@ def classify_range(size_range_str):
     category_percents = {cat: [] for cat in categories}
 
     for day in sorted(day_data.keys()):
-    totals = day_data[day]
-    total_count = sum(totals.values())
-    dates.append(day.strftime("%d/%m/%y"))
-    for cat in categories:
-        if total_count > 0:
-            pct = round((totals[cat] / total_count) * 100, 2)
-        else:
-            pct = 0
-        category_percents[cat].append(pct)
+        totals = day_data[day]
+        total_count = sum(totals.values())
+        dates.append(day.strftime("%d/%m/%y"))
+        for cat in categories:
+            if total_count > 0:
+                pct = round((totals[cat] / total_count) * 100, 2)
+            else:
+                pct = 0
+            category_percents[cat].append(pct)
     
     response = { "dates": dates, "last_updated": last_updated}
     for cat in categories:
