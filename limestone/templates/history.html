@@ -1,156 +1,156 @@
 <!DOCTYPE html>
-    <html lang="en">
-    <head>
-      <meta charset="UTF-8" />
-      <title>Weekly Size Distribution Trend</title>
-      <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-      <style>
-        body {
-          font-family: Arial, sans-serif;
-          padding: 0;
-          margin: 0;
-          background: url('/static/imgs/history.jpg') no-repeat center center fixed;
-          background-size: cover;
-          display: flex;
-          justify-content: center;
-          min-height: 100vh;
-          align-items: flex-start;
-        }
-        .container {
-          background-color: rgba(255, 255, 255, 0.85);
-          padding: 30px;
-          border-radius: 10px;
-          box-shadow: 0 0 15px rgba(0,0,0,0.2);
-          max-width: 1200px;
-          margin: 40px 20px;
-          width: 100%;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-        }
-        #chart-container {
-          max-width: 1100px;
-          width: 100%;
-          max-height: 900px;
-          background: white;
-          padding: 20px;
-          border-radius: 10px;
-          box-shadow: 0 0 12px rgba(0,0,0,0.1);
-          overflow: hidden;
-        }
-        canvas {
-          width: 100% !important;
-          height: 100% !important;
-          display: block;
-        }
-        h1 {
-          margin-bottom: 20px;
-        }
-        .topbar button {
-          margin: 0 5px 20px 0;
-          padding: 8px 15px;
-          border: none;
-          border-radius: 5px;
-          background-color: #4CAF50;
-          color: white;
-          cursor: pointer;
-        }
-        .topbar button:hover {
-          background-color: #45a049;
-        }
-      </style>
-    </head>
-    <body>
-      <div class="container">
-        <h1>Size Distribution Percentages (Past 7 Days)</h1>
-        <div class="topbar">
-          <button onclick="location.href='/dashboard'">Back to Dashboard</button>
-          <button onclick="location.href='/dailytrend'">Daily Trend</button>
-        </div>
-        <div id="chart-container">
-          <canvas id="historyChart"></canvas>
-        </div>
-      </div>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Weekly Size Distribution Trend</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 0;
+      margin: 0;
+      background: url('/static/imgs/history.jpg') no-repeat center center fixed;
+      background-size: cover;
+      display: flex;
+      justify-content: center;
+      min-height: 100vh;
+      align-items: flex-start;
+    }
+    .container {
+      background-color: rgba(255, 255, 255, 0.85);
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.2);
+      max-width: 1200px;
+      margin: 40px 20px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    #chart-container {
+      max-width: 1100px;
+      width: 100%;
+      max-height: 900px;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 12px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+    canvas {
+      width: 100% !important;
+      height: 100% !important;
+      display: block;
+    }
+    h1 {
+      margin-bottom: 20px;
+    }
+    .topbar button {
+      margin: 0 5px 20px 0;
+      padding: 8px 15px;
+      border: none;
+      border-radius: 5px;
+      background-color: #4CAF50;
+      color: white;
+      cursor: pointer;
+    }
+    .topbar button:hover {
+      background-color: #45a049;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Size Distribution Percentages (Past 7 Days)</h1>
+    <div class="topbar">
+      <button onclick="location.href='/dashboard'">Back to Dashboard</button>
+      <button onclick="location.href='/dailytrend'">Daily Trend</button>
+    </div>
+    <div id="chart-container">
+      <canvas id="historyChart"></canvas>
+    </div>
+  </div>
 
-      <script>
-        async function fetchHistory() {
-          const res = await fetch('/api/history');
-          return await res.json();
-        }
+  <script>
+    async function fetchHistory() {
+      const res = await fetch('/api/history');
+      return await res.json();
+    }
 
-        function renderChart(data) {
-          const ctx = document.getElementById('historyChart').getContext('2d');
-          new Chart(ctx, {
-            type: 'line',
-            data: {
-              labels: data.dates,
-              datasets: [
-                  {
-                    label: '<30mm',
-                    data: data["<30mm"],
-                    borderColor: '#1f77b4',
-                    backgroundColor: 'rgba(31, 119, 180, 0.2)',
-                    fill: false,
-                    tension: 0.2
-                  },
-                  {
-                    label: '30-50mm',
-                    data: data["30-50mm"],
-                    borderColor: '#ff7f0e',
-                    backgroundColor: 'rgba(255, 127, 14, 0.2)',
-                    fill: false,
-                    tension: 0.2
-                  },
-                  {
-                    label: '50-80mm',
-                    data: data["50-80mm"],
-                    borderColor: '#2ca02c',
-                    backgroundColor: 'rgba(44, 160, 44, 0.2)',
-                    fill: false,
-                    tension: 0.2
-                  },
-                  {
-                    label: '80-150mm',
-                    data: data["80-150mm"],
-                    borderColor: '#d62728',
-                    backgroundColor: 'rgba(214, 39, 40, 0.2)',
-                    fill: false,
-                    tension: 0.2
-                  },
-                  {
-                    label: '>150mm',
-                    data: data[">150mm"],
-                    borderColor: '#9467bd',
-                    backgroundColor: 'rgba(148, 103, 189, 0.2)',
-                    fill: false,
-                    tension: 0.2
-                  }
-                ]
+    function renderChart(data) {
+      const ctx = document.getElementById('historyChart').getContext('2d');
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: data.dates,
+          datasets: [
+            {
+              label: '<30mm',
+              data: data["<30mm"],
+              borderColor: '#1f77b4',
+              backgroundColor: 'rgba(31, 119, 180, 0.2)',
+              fill: false,
+              tension: 0.2
             },
-            options: {
-              responsive: true,
-              maintainAspectRatio: false,
-              scales: {
-                y: {
-                  beginAtZero: true,
-                  max: 100,
-                  title: {
-                    display: true,
-                    text: 'Percentage (%)'
-                  }
-                },
-                x: {
-                  title: {
-                    display: true,
-                    text: 'Date (dd/mm/yy)'
-                  }
-                }
+            {
+              label: '30-50mm',
+              data: data["30-50mm"],
+              borderColor: '#ff7f0e',
+              backgroundColor: 'rgba(255, 127, 14, 0.2)',
+              fill: false,
+              tension: 0.2
+            },
+            {
+              label: '50-80mm',
+              data: data["50-80mm"],
+              borderColor: '#2ca02c',
+              backgroundColor: 'rgba(44, 160, 44, 0.2)',
+              fill: false,
+              tension: 0.2
+            },
+            {
+              label: '80-150mm',
+              data: data["80-150mm"],
+              borderColor: '#d62728',
+              backgroundColor: 'rgba(214, 39, 40, 0.2)',
+              fill: false,
+              tension: 0.2
+            },
+            {
+              label: '>150mm',
+              data: data[">150mm"],
+              borderColor: '#9467bd',
+              backgroundColor: 'rgba(148, 103, 189, 0.2)',
+              fill: false,
+              tension: 0.2
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: true,
+              max: 100,
+              title: {
+                display: true,
+                text: 'Percentage (%)'
+              }
+            },
+            x: {
+              title: {
+                display: true,
+                text: 'Date (dd/mm/yy)'
               }
             }
-          });
+          }
         }
+      });
+    }
 
-        fetchHistory().then(renderChart);
-      </script>
-    </body>
-    </html>
+    fetchHistory().then(renderChart);
+  </script>
+</body>
+</html>
