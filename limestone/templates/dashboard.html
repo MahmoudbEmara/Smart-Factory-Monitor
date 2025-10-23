@@ -1,1 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Limestone Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+    <style>
+        body {
+            background: url("/static/imgs/dashboard.jpg") center/cover fixed no-repeat;
+            font-family: Arial, sans-serif; color: white;
+            text-align: center; margin: 0; padding: 0;
+        }
+        .container { background: rgba(0,0,0,0.5); padding: 20px; border-radius: 10px; margin: 30px auto; width: 90%; max-width: 1000px; }
+        button {
+            margin: 10px; padding: 10px 20px; border: none; border-radius: 5px;
+            background-color: #009688; color: white; font-weight: bold; cursor: pointer;
+        }
+        table {
+            width: 100%; border-collapse: collapse; margin-top: 20px;
+            background: rgba(255,255,255,0.1);
+        }
+        th, td { border: 1px solid #ccc; padding: 8px; color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📈 Limestone Rock Size Distribution</h1>
+        <button onclick="window.location='/dailytrend'">Daily Trend</button>
+        <button onclick="window.location='/history'">Weekly History</button>
+        <button onclick="resetData()">Reset</button>
+        <button onclick="window.location='/logout'">Logout</button>
+        <canvas id="chart" width="800" height="400"></canvas>
+        <div id="table-container"></div>
+    </div>
+
+    <script>
+        let chart;
+        async function fetchData() {
+            const res = await fetch('/dashboard-data');
+            const data = await res.json();
+            updateDashboard(data);
+        }
+
+        function updateDashboard(data) {
+            const labels = Object.keys(Object.values(data)[0] || {});
+            const datasets = Object.keys(data).map(node => ({
+                label: node,
+                data: labels.map(size => data[node][size] || 0),
+                backgroundColor: 'rgba(0,150,136,0.7)'
+            }));
+
+            if (chart) chart.destroy();
+            const ctx = document.getElementById('chart').getContext('2d');
+            chart = new Chart(ctx, {
+                type: 'bar',
+                data: { labels, datasets },
+                options: { plugins: { datalabels: { color: '#fff' } } }
+            });
+
+            // Table
+            let html = "<table><tr><th>Node</th>";
+            labels.forEach(size => html += `<th>${size}</th>`);
+            html += "</tr>";
+            for (let node in data) {
+                html += `<tr><td>${node}</td>`;
+                labels.forEach(size => html += `<td>${data[node][size] || 0}</td>`);
+                html += "</tr>";
+            }
+            html += "</table>";
+            document.getElementById('table-container').innerHTML = html;
+        }
+
+        async function resetData() {
+            const key = prompt("Enter reset key:");
+            const res = await fetch('/reset', {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + key }
+            });
+            const msg = await res.json();
+            alert(msg.message || msg.error);
+            fetchData();
+        }
+
+        fetchData();
+        setInterval(fetchData, 15000);
+    </script>
+</body>
+</html>
 
