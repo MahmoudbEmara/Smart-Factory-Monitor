@@ -110,4 +110,156 @@
             "<30mm": "#4CAF50",
             "30-50mm": "#2196F3",
             "50-80mm": "#FF9800",
-            "80-150mm
+            "80-150mm": "#9C27B0",
+            ">150mm": "#F44336"
+        };
+    
+        // Fetch data once and update UI
+        async function fetchDashboardData() {
+            try {
+                const res = await fetch("/dashboard-data");
+                const data = await res.json();
+                updateDashboardUI(data);
+            } catch (error) {
+                console.error("Failed to load dashboard data", error);
+                document.getElementById("tables").innerHTML = "<p style='color: red;'>Error loading data.</p>";
+            }
+        }
+    
+        // Update the tables and chart with data
+        function updateDashboardUI(data) {
+            const totals = data.totals || {};
+            const lastUpdated = data.last_updated || "Never";
+    
+            document.getElementById("last-updated").textContent = `Last updated: ${new Date(lastUpdated).toLocaleString()}`;
+    
+            const tablesContainer = document.getElementById("tables");
+            tablesContainer.innerHTML = "";
+    
+            const labels = Object.keys(totals);
+            const sizeCategories = ["<30mm", "30-50mm", "50-80mm", "80-150mm", ">150mm"];
+    
+            for (const node of labels) {
+                const nodeData = totals[node];
+                const table = document.createElement("table");
+    
+                let header = `<tr><th colspan="2">Node: ${node}</th></tr><tr><th>Size Range</th><th>Count</th></tr>`;
+                let total = 0;
+                let rows = sizeCategories.map(size => {
+                    const count = nodeData[size] || 0;
+                    total += count;
+                    return `<tr><td>${size}</td><td>${count}</td></tr>`;
+                }).join("");
+    
+                rows += `<tr><td><strong>Total</strong> <small>(since 21/May/2025)</small></td><td><strong>${total}</strong></td></tr>`;
+    
+                table.innerHTML = header + rows;
+                tablesContainer.appendChild(table);
+            }
+    
+            // Update the chart
+            const datasets = sizeCategories.map(category => ({
+                label: category,
+                data: labels.map(node => totals[node][category] || 0),
+                backgroundColor: categoryColors[category],
+            }));
+    
+            const ctx = document.getElementById("barChart").getContext("2d");
+            if (window.barChartInstance) {
+                window.barChartInstance.destroy();
+            }
+    
+            window.barChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { position: 'top' },
+                        datalabels: {
+                            anchor: 'end',
+                            align: 'top',
+                            formatter: function (value, context) {
+                                const nodeIndex = context.dataIndex;
+                                const allDatasets = context.chart.data.datasets;
+                                let nodeTotal = 0;
+                                for (let i = 0; i < allDatasets.length; i++) {
+                                    nodeTotal += allDatasets[i].data[nodeIndex] || 0;
+                                }
+                                if (nodeTotal === 0) return "0%";
+                                return `${(value / nodeTotal * 100).toFixed(1)}%`;
+                            },
+                            font: { weight: 'bold' },
+                            color: '#000'
+                        }
+                    },
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                },
+                plugins: [ChartDataLabels]
+            });
+        }
+    
+        // Polling function: fetch data every interval ms, then update UI
+        let previousDataJSON = null;  // store stringified data for comparison
+        
+        function isDataChanged(newData) {
+            const newDataJSON = JSON.stringify(newData);
+            if (newDataJSON === previousDataJSON) {
+                return false; // no change
+            }
+            previousDataJSON = newDataJSON;
+            return true; // changed
+        }
+        
+        function updateDashboardUIIfChanged(data) {
+            if (isDataChanged(data)) {
+                updateDashboardUI(data);
+            } else {
+                console.log("No data change detected, skipping UI update.");
+            }
+        }
+        
+        // Then change your pollAndUpdate call to use updateDashboardUIIfChanged
+        
+        function pollAndUpdate(url, updateFn, intervalMs) {
+            async function poll() {
+                try {
+                    const response = await fetch(url);
+                    const data = await response.json();
+                    updateFn(data);
+                } catch (error) {
+                    console.error("Polling error:", error);
+                }
+                setTimeout(poll, intervalMs);
+            }
+            poll();
+        }
+         
+        window.onload = () => {
+            fetchDashboardData();  // initial load
+            pollAndUpdate("/dashboard-data", updateDashboardUIIfChanged, 15000);
+        };
+
+        async function resetDashboard() {
+            const key = prompt("Enter reset key:");
+            if (!key) return;
+            try {
+                const response = await fetch("/reset", {
+                    method: "POST",
+                    headers: { "Authorization": "Bearer " + key }
+                });
+                const msg = await response.json();
+                alert(msg.message || msg.error);
+                fetchDashboardData();
+            } catch (err) {
+                alert("Reset failed.");
+            }
+        }
+    </script>
+</body>
+</html>
