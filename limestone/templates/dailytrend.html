@@ -1,1 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Daily Trend</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            background: url("/static/imgs/dailytrend.jpg") center/cover fixed no-repeat;
+            color: white; font-family: Arial, sans-serif; text-align: center;
+        }
+        .container { background: rgba(0,0,0,0.6); padding: 20px; margin: 30px auto; border-radius: 10px; width: 90%; max-width: 900px; }
+        button { margin: 10px; padding: 10px 20px; background-color: #009688; color: white; border: none; border-radius: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 24-Hour Size Distribution Trend</h1>
+        <button onclick="window.location='/dashboard'">Dashboard</button>
+        <button onclick="window.location='/history'">Weekly History</button>
+        <canvas id="dailyChart"></canvas>
+    </div>
+
+    <script>
+        async function loadData() {
+            const res = await fetch('/api/daily-trend');
+            const data = await res.json();
+            const labels = [...new Set(Object.values(data).flat().map(d => d.minute))].sort();
+            const datasets = Object.keys(data).map(size => ({
+                label: size,
+                data: labels.map(l => {
+                    const found = data[size].find(d => d.minute === l);
+                    return found ? found.count : 0;
+                }),
+                borderWidth: 2,
+                fill: false
+            }));
+            new Chart(document.getElementById('dailyChart'), {
+                type: 'line',
+                data: { labels, datasets },
+                options: { scales: { x: { ticks: { color: 'white' } }, y: { ticks: { color: 'white' } } } }
+            });
+        }
+        loadData();
+    </script>
+</body>
+</html>
 
