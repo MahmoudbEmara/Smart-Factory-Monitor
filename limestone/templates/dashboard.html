@@ -1,248 +1,113 @@
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Limestone Monitoring Dashboard Beta</title>
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
-        <style>
-            /* Background image on body */
-            body {
-                background: url('/static/imgs/dashboard.jpg') no-repeat center center fixed;
-                background-size: cover;
-                font-family: Arial, sans-serif;
-                margin: 20px;
-                color: #333;
-            }
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Limestone Monitoring Dashboard Beta</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    <style>
+        /* Background image on body */
+        body {
+            background: url('/static/imgs/dashboard.jpg') no-repeat center center fixed;
+            background-size: cover;
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            color: #333;
+        }
 
-            /* Add a semi-transparent white overlay container to keep content readable */
-            #content-wrapper {
-                background-color: rgba(255, 255, 255, 0.9);
-                border-radius: 10px;
-                padding: 20px 30px;
-                max-width: 1200px;
-                margin: 0 auto; /* centers horizontally */
-                box-shadow: 0 0 15px rgba(0,0,0,0.15);
-            }
+        /* Add a semi-transparent white overlay container to keep content readable */
+        #content-wrapper {
+            background-color: rgba(255, 255, 255, 0.9);
+            border-radius: 10px;
+            padding: 20px 30px;
+            max-width: 1200px;
+            margin: 0 auto; /* centers horizontally */
+            box-shadow: 0 0 15px rgba(0,0,0,0.15);
+        }
 
-            h1 {
-                color: #222;
-                text-align: center;
-            }
+        h1 {
+            color: #222;
+            text-align: center;
+        }
 
-            table {
-                width: 100%;
-                border-collapse: collapse;
-                margin-bottom: 40px;
-                background-color: white;
-                box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 40px;
+            background-color: white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
 
-            th, td {
-                border: 1px solid #ddd;
-                padding: 8px;
-                text-align: center;
-            }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
 
-            th {
-                background-color: #4CAF50;
-                color: white;
-            }
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
 
-            tr:nth-child(even) {
-                background-color: #f2f2f2;
-            }
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
 
-            button {
-                margin-bottom: 20px;
-                padding: 10px 20px;
-                background-color: #f44336;
-                color: white;
-                border: none;
-                cursor: pointer;
-                border-radius: 4px;
-            }
+        button {
+            margin-bottom: 20px;
+            padding: 10px 20px;
+            background-color: #f44336;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 4px;
+        }
 
-            button:hover {
-                background-color: #d32f2f;
-            }
+        button:hover {
+            background-color: #d32f2f;
+        }
 
-            #barChart {
-                max-width: 1200px;
-                max-height: 900px;
-                width: 100%;
-                height: auto;
-                background: white;
-                padding: 20px;
-                border-radius: 10px;
-                box-shadow: 0 0 12px rgba(0,0,0,0.1);
-            }
+        #barChart {
+            max-width: 1200px;
+            max-height: 900px;
+            width: 100%;
+            height: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 12px rgba(0,0,0,0.1);
+        }
 
-            /* Style the logout link as a button */
-            a.logout-link {
-                background-color: #555;
-                color: white;
-                padding: 8px 16px;
-                text-decoration: none;
-                border-radius: 4px;
-                font-size: 14px;
-            }
-        </style>
-    </head>
-    <body>
-        <div id="content-wrapper">
-            <h1>Limestone Detection Dashboard</h1>
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <div style="display: flex; gap: 10px;">
-                    <button onclick="resetDashboard()">Reset Dashboard</button>
-                    <button onclick="location.href='/history'">History</button>
-                    <button onclick="location.href='/dailytrend'">Daily Trend</button>
-                </div>
-                <a href="/logout" class="logout-link">Logout</a>
+        /* Style the logout link as a button */
+        a.logout-link {
+            background-color: #555;
+            color: white;
+            padding: 8px 16px;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div id="content-wrapper">
+        <h1>Limestone Detection Dashboard</h1>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <div style="display: flex; gap: 10px;">
+                <button onclick="resetDashboard()">Reset Dashboard</button>
+                <button onclick="location.href='/history'">History</button>
+                <button onclick="location.href='/dailytrend'">Daily Trend</button>
             </div>
-            <div id="tables"></div>
-            <canvas id="barChart"></canvas>
-            <p id="last-updated" style="font-style: italic; color: #555;"></p>
+            <a href="/logout" class="logout-link">Logout</a>
         </div>
-        <script>
-            // Colors per size category for bars
-            const categoryColors = {
-                "<30mm": "#4CAF50",
-                "30-50mm": "#2196F3",
-                "50-80mm": "#FF9800",
-                "80-150mm": "#9C27B0",
-                ">150mm": "#F44336"
-            };
-        
-            // Fetch data once and update UI
-            async function fetchDashboardData() {
-                try {
-                    const res = await fetch("/dashboard-data");
-                    const data = await res.json();
-                    updateDashboardUI(data);
-                } catch (error) {
-                    console.error("Failed to load dashboard data", error);
-                    document.getElementById("tables").innerHTML = "<p style='color: red;'>Error loading data.</p>";
-                }
-            }
-        
-            // Update the tables and chart with data
-            function updateDashboardUI(data) {
-                const totals = data.totals || {};
-                const lastUpdated = data.last_updated || "Never";
-        
-                document.getElementById("last-updated").textContent = `Last updated: ${new Date(lastUpdated).toLocaleString()}`;
-        
-                const tablesContainer = document.getElementById("tables");
-                tablesContainer.innerHTML = "";
-        
-                const labels = Object.keys(totals);
-                const sizeCategories = ["<30mm", "30-50mm", "50-80mm", "80-150mm", ">150mm"];
-        
-                for (const node of labels) {
-                    const nodeData = totals[node];
-                    const table = document.createElement("table");
-        
-                    let header = `<tr><th colspan="2">Node: ${node}</th></tr><tr><th>Size Range</th><th>Count</th></tr>`;
-                    let total = 0;
-                    let rows = sizeCategories.map(size => {
-                        const count = nodeData[size] || 0;
-                        total += count;
-                        return `<tr><td>${size}</td><td>${count}</td></tr>`;
-                    }).join("");
-        
-                    rows += `<tr><td><strong>Total</strong> <small>(since 21/May/2025)</small></td><td><strong>${total}</strong></td></tr>`;
-        
-                    table.innerHTML = header + rows;
-                    tablesContainer.appendChild(table);
-                }
-        
-                // Update the chart
-                const datasets = sizeCategories.map(category => ({
-                    label: category,
-                    data: labels.map(node => totals[node][category] || 0),
-                    backgroundColor: categoryColors[category],
-                }));
-        
-                const ctx = document.getElementById("barChart").getContext("2d");
-                if (window.barChartInstance) {
-                    window.barChartInstance.destroy();
-                }
-        
-                window.barChartInstance = new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: labels,
-                        datasets: datasets
-                    },
-                    options: {
-                        responsive: true,
-                        plugins: {
-                            legend: { position: 'top' },
-                            datalabels: {
-                                anchor: 'end',
-                                align: 'top',
-                                formatter: function (value, context) {
-                                    const nodeIndex = context.dataIndex;
-                                    const allDatasets = context.chart.data.datasets;
-                                    let nodeTotal = 0;
-                                    for (let i = 0; i < allDatasets.length; i++) {
-                                        nodeTotal += allDatasets[i].data[nodeIndex] || 0;
-                                    }
-                                    if (nodeTotal === 0) return "0%";
-                                    return `${(value / nodeTotal * 100).toFixed(1)}%`;
-                                },
-                                font: { weight: 'bold' },
-                                color: '#000'
-                            }
-                        },
-                        scales: {
-                            y: { beginAtZero: true }
-                        }
-                    },
-                    plugins: [ChartDataLabels]
-                });
-            }
-        
-            // Polling function: fetch data every interval ms, then update UI
-            let previousDataJSON = null;  // store stringified data for comparison
-            
-            function isDataChanged(newData) {
-                const newDataJSON = JSON.stringify(newData);
-                if (newDataJSON === previousDataJSON) {
-                    return false; // no change
-                }
-                previousDataJSON = newDataJSON;
-                return true; // changed
-            }
-            
-            function updateDashboardUIIfChanged(data) {
-                if (isDataChanged(data)) {
-                    updateDashboardUI(data);
-                } else {
-                    console.log("No data change detected, skipping UI update.");
-                }
-            }
-            
-            // Then change your pollAndUpdate call to use updateDashboardUIIfChanged
-            
-            function pollAndUpdate(url, updateFn, intervalMs) {
-                async function poll() {
-                    try {
-                        const response = await fetch(url);
-                        const data = await response.json();
-                        updateFn(data);
-                    } catch (error) {
-                        console.error("Polling error:", error);
-                    }
-                    setTimeout(poll, intervalMs);
-                }
-                poll();
-            }
-             
-            window.onload = () => {
-                fetchDashboardData();  // initial load
-                pollAndUpdate("/dashboard-data", updateDashboardUIIfChanged, 15000);
-            };
-        </script>
-    </body>
-    </html>
+        <div id="tables"></div>
+        <canvas id="barChart"></canvas>
+        <p id="last-updated" style="font-style: italic; color: #555;"></p>
+    </div>
+    <script>
+        // Colors per size category for bars
+        const categoryColors = {
+            "<30mm": "#4CAF50",
+            "30-50mm": "#2196F3",
+            "50-80mm": "#FF9800",
+            "80-150mm
