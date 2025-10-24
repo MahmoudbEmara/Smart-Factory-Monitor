@@ -4,7 +4,7 @@ from dateutil import parser
 from collections import defaultdict
 import hashlib, json, re
 
-from limestone import get_db_conn, RESET_KEY, EGYPT_TZ
+from limestone.utils import get_db_conn, RESET_KEY, EGYPT_TZ
 
 api_bp = Blueprint('api', __name__)
 
