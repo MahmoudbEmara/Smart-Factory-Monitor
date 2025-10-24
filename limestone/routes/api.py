@@ -143,67 +143,69 @@ def api_history():
 # ---------------- Daily Trend ----------------
 @api_bp.route('/api/daily-trend')
 def api_daily_trend():
-    with get_db_conn() as conn:
-        cur = conn.cursor()
-        cur.execute("SELECT value FROM meta WHERE key='last_update'")
-        row = cur.fetchone()
-        end_time = parser.isoparse(row[0]) if row else datetime.now(timezone.utc)
+    if not session.get("logged_in"):
+        return jsonify({"error": "Unauthorized"}), 403
 
-    start_time = end_time - timedelta(hours=24)
+    try:
+        with get_db_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT value FROM meta WHERE key='last_update'")
+                row = cur.fetchone()
+                end_time = parser.isoparse(row[0]) if row else datetime.now(timezone.utc)
 
-    categories = ['<30mm', '30-50mm', '50-80mm', '80-150mm', '>150mm']
-    color_map = {
-        '<30mm': '#1f77b4', '30-50mm': '#ff7f0e', '50-80mm': '#2ca02c',
-        '80-150mm': '#d62728', '>150mm': '#9467bd',
-    }
+        start_time = end_time - timedelta(hours=24)
 
-    with get_db_conn() as conn:
-        cur = conn.cursor()
-        cur.execute("""
-            SELECT 
-                DATE_TRUNC('minute', timestamp AT TIME ZONE 'UTC'),
-                size_range,
-                SUM(count)
-            FROM realdata
-            WHERE timestamp >= %s AND timestamp < %s
-            GROUP BY 1, size_range
-            ORDER BY 1;
-        """, (start_time, end_time))
-        rows = cur.fetchall()
+        categories = ['<30mm', '30-50mm', '50-80mm', '80-150mm', '>150mm']
+        color_map = {
+            '<30mm': '#1f77b4', '30-50mm': '#ff7f0e', '50-80mm': '#2ca02c',
+            '80-150mm': '#d62728', '>150mm': '#9467bd',
+        }
 
-    minute_bins = defaultdict(lambda: defaultdict(int))
-    for minute, sr, total in rows:
-        key = minute.replace(tzinfo=timezone.utc).isoformat()
-        minute_bins[key][sr] += total
+        with get_db_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT 
+                        DATE_TRUNC('minute', timestamp AT TIME ZONE 'UTC'),
+                        size_range,
+                        SUM(count)
+                    FROM realdata
+                    WHERE timestamp >= %s AND timestamp < %s
+                    GROUP BY 1, size_range
+                    ORDER BY 1;
+                """, (start_time, end_time))
+                rows = cur.fetchall()
 
-    sorted_times = sorted(minute_bins.keys())
+        minute_bins = defaultdict(lambda: defaultdict(int))
+        for minute, sr, total in rows:
+            minute_str = minute.replace(tzinfo=timezone.utc).isoformat()
+            minute_bins[minute_str][sr] += total
 
-    datasets = []
-    for cat in categories:
-        vals = []
-        for t in sorted_times:
-            total = sum(minute_bins[t].values())
-            pct = (minute_bins[t][cat] / total * 100) if total else 0
-            vals.append(round(pct, 2))
-        datasets.append({
-            "label": cat,
-            "values": vals,
-            "color": color_map[cat]
-        })
+        sorted_times = sorted(minute_bins.keys())
 
-    payload = {
-        "timestamps": sorted_times,
-        "datasets": datasets
-    }
+        datasets = []
+        for cat in categories:
+            vals = []
+            for t in sorted_times:
+                total = sum(minute_bins[t].values())
+                pct = (minute_bins[t][cat] / total * 100) if total else 0
+                vals.append(round(pct, 2))
+            datasets.append({
+                "label": cat,
+                "values": vals,
+                "color": color_map[cat]
+            })
 
-    data_hash = hashlib.md5(json.dumps(payload, sort_keys=True).encode()).hexdigest()
+        payload = {
+            "timestamps": sorted_times,
+            "datasets": datasets,
+            "last_updated": end_time.isoformat()
+        }
 
-    if getattr(current_app, 'last_trend_hash', None) != data_hash:
-        current_app.last_trend_hash = data_hash
-        current_app.last_trend_updated = end_time.isoformat()
+        data_hash = hashlib.md5(json.dumps(payload, sort_keys=True).encode()).hexdigest()
+        payload["data_hash"] = data_hash
 
-    return jsonify({
-        **payload,
-        "last_updated": current_app.last_trend_updated,
-        "data_hash": data_hash
-    })
+        return jsonify(payload)
+
+    except Exception as e:
+        print("Error in /api/daily-trend:", e)
+        return jsonify({"error": "Internal Server Error"}), 500
