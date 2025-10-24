@@ -172,7 +172,7 @@
                 options: {
                     responsive: true,
                     layout: {
-                        padding: { top: 60 }
+                        padding: { top: 80 } // extra top padding so labels don't overlap legend
                     },
                     plugins: {
                         legend: {
@@ -180,7 +180,7 @@
                             labels: {
                                 font: {
                                     size: 20,
-                                    weight: 'bold'   
+                                    weight: 'bold'
                                 },
                                 boxWidth: 30,
                                 boxHeight: 20,
@@ -189,7 +189,8 @@
                         },
                         datalabels: {
                             anchor: 'end',
-                            align: 'top',
+                            align: 'end',  // slightly inside the top of the bar
+                            offset: -6,     // move it slightly down to avoid overlapping legend
                             formatter: function(value, context) {
                                 const nodeIndex = context.dataIndex;
                                 const allDatasets = context.chart.data.datasets;
