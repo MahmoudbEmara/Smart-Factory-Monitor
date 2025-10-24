@@ -15,7 +15,7 @@ def create_app():
 
     from .routes.auth_routes import auth_bp
     from .routes.update_routes import update_bp
-    from .routes.dashboard_routes import dashboard_bp testing
+    from .routes.dashboard_routes import dashboard_bp
     from .routes.dailytrend_routes import dailytrend_bp
     from .routes.history_routes import history_bp
     from .routes.api import api_bp
