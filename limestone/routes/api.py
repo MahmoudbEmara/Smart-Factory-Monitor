@@ -17,7 +17,6 @@ def dashboard_data():
     try:
         with get_db_conn() as conn:
             with conn.cursor() as cur:
-                # Query totals per size per node
                 cur.execute("""
                     SELECT node, size_range, SUM(count)
                     FROM realdata
@@ -26,15 +25,15 @@ def dashboard_data():
                 """)
                 rows = cur.fetchall()
 
-                # Query latest timestamp
                 cur.execute("SELECT MAX(timestamp) FROM realdata;")
                 last_updated = cur.fetchone()[0]
 
-        # Build results structure
-        result = {
-            "totals": {},
-            "last_updated": last_updated if last_updated else "No data yet"
-        }
+        if last_updated:
+            last_updated = last_updated.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+        else:
+            last_updated = "No data yet"
+
+        result = {"totals": {}, "last_updated": last_updated}
 
         for node, size_range, count in rows:
             if node not in result["totals"]:
@@ -152,6 +151,7 @@ def api_daily_trend():
                 row = cur.fetchone()
                 end_time = parser.isoparse(row[0]) if row else datetime.now(timezone.utc)
 
+        end_time = end_time.astimezone(timezone.utc)
         start_time = end_time - timedelta(hours=24)
 
         categories = ['<30mm', '30-50mm', '50-80mm', '80-150mm', '>150mm']
@@ -176,7 +176,7 @@ def api_daily_trend():
 
         minute_bins = defaultdict(lambda: defaultdict(int))
         for minute, sr, total in rows:
-            minute_str = minute.replace(tzinfo=timezone.utc).isoformat()
+            minute_str = minute.replace(tzinfo=timezone.utc).isoformat().replace("+00:00", "Z")
             minute_bins[minute_str][sr] += total
 
         sorted_times = sorted(minute_bins.keys())
@@ -197,7 +197,7 @@ def api_daily_trend():
         payload = {
             "timestamps": sorted_times,
             "datasets": datasets,
-            "last_updated": end_time.isoformat()
+            "last_updated": end_time.isoformat().replace("+00:00", "Z")
         }
 
         data_hash = hashlib.md5(json.dumps(payload, sort_keys=True).encode()).hexdigest()
