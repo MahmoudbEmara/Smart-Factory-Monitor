@@ -14,31 +14,38 @@ def dashboard_data():
     if not session.get("logged_in"):
         return jsonify({"error": "Unauthorized"}), 403
 
-    conn = get_db()
-    cur = conn.cursor()
+    try:
+        with get_db_conn() as conn:
+            with conn.cursor() as cur:
+                # Query totals per size per node
+                cur.execute("""
+                    SELECT node, size_range, SUM(count)
+                    FROM realdata
+                    GROUP BY node, size_range
+                    ORDER BY node;
+                """)
+                rows = cur.fetchall()
 
-    # Query totals per size per node
-    cur.execute("""
-        SELECT node, size_range, SUM(count)
-        FROM realdata
-        GROUP BY node, size_range
-        ORDER BY node;
-    """)
-    rows = cur.fetchall()
+                # Query latest timestamp
+                cur.execute("SELECT MAX(timestamp) FROM realdata;")
+                last_updated = cur.fetchone()[0]
 
-    # Query latest timestamp (for "Last Updated")
-    cur.execute("SELECT MAX(timestamp) FROM realdata;")
-    last_updated = cur.fetchone()[0]
+        # Build results structure
+        result = {
+            "totals": {},
+            "last_updated": last_updated if last_updated else "No data yet"
+        }
 
-    cur.close()
+        for node, size_range, count in rows:
+            if node not in result["totals"]:
+                result["totals"][node] = {}
+            result["totals"][node][size_range] = count
 
-    result = {"totals": {}, "last_updated": last_updated}
+        return jsonify(result)
 
-    for node, size, count in rows:
-        result["totals"].setdefault(node, {})[size] = count
-
-    return jsonify(result)
-
+    except Exception as e:
+        print("Error in /dashboard-data:", e)
+        return jsonify({"error": "Internal Server Error"}), 500
 
 # ---------------- Reset Database ----------------
 @api_bp.route('/reset', methods=['POST'])
