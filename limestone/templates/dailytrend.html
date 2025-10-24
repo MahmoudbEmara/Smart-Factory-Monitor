@@ -156,15 +156,7 @@
         
             if (data.last_updated) {
                 const dt = new Date(data.last_updated);
-                document.getElementById("last-updated").innerText =
-                    `Last updated: ${dt.toLocaleString([], {
-                      year: "numeric",
-                      month: "2-digit",
-                      day: "2-digit",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                      second: "2-digit"
-                    })}`;
+                document.getElementById("last-updated").innerText = `Last updated: ${dt.toLocaleTimeString()}`;
             } else {
               console.log("No trend data change detected.");
             }
