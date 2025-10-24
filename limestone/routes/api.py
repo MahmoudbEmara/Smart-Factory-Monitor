@@ -64,81 +64,80 @@ def reset():
 
     return jsonify({"message": "Dashboard data reset."})
 
-
-# ---------------- History Trend ----------------
+# ---------------- History Trend (Past 7 Days) ----------------
 @api_bp.route('/api/history')
 def api_history():
-    today = datetime.now(tz=EGYPT_TZ).date()
-    seven_days_ago = today - timedelta(days=6)
+    if not session.get("logged_in"):
+        return jsonify({"error": "Unauthorized"}), 403
 
-    def classify_range(size_range_str):
-        nums = [int(n) for n in re.findall(r'\d+', size_range_str)]
-        if not nums:
-            return None
-
-        if len(nums) == 1:
-            val = nums[0]
-            if "<" in size_range_str:
-                return "<30mm" if val == 30 else None
-            if ">" in size_range_str:
-                return ">150mm" if val == 150 else None
-            return None
-
-        low, high = nums
-        if high <= 30: return "<30mm"
-        if high <= 50: return "30-50mm"
-        if high <= 80: return "50-80mm"
-        if high <= 150: return "80-150mm"
-        return ">150mm"
-
-    with get_db_conn() as conn:
-        with conn.cursor() as cur:
-            cur.execute("""
-                SELECT
-                    DATE(timestamp AT TIME ZONE 'Africa/Cairo'),
-                    size_range,
-                    SUM(count)
-                FROM realdata
-                WHERE DATE(timestamp AT TIME ZONE 'Africa/Cairo') >= %s
-                GROUP BY 1, size_range
-                ORDER BY 1;
-            """, (seven_days_ago,))
-            rows = cur.fetchall()
-
-            cur.execute("SELECT value FROM meta WHERE key='last_update'")
-            row = cur.fetchone()
-            last_updated = row[0] if row else None
+    today = datetime.now(EGYPT_TZ).date()
+    start_day = today - timedelta(days=6)
 
     categories = ["<30mm", "30-50mm", "50-80mm", "80-150mm", ">150mm"]
+
+    # Initialize structure for full 7 days
     day_data = {
-        seven_days_ago + timedelta(days=i): {cat: 0 for cat in categories}
+        start_day + timedelta(days=i): {cat: 0 for cat in categories}
         for i in range(7)
     }
 
-    for day, sr, total in rows:
-        sr_clean = sr.lower().replace(" ", "")
-        cat = classify_range(sr_clean)
-        if cat and day in day_data:
-            day_data[day][cat] += total
+    try:
+        with get_db_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT
+                        DATE(timestamp AT TIME ZONE 'Africa/Cairo') AS day,
+                        size_range,
+                        SUM(count)
+                    FROM realdata
+                    WHERE DATE(timestamp AT TIME ZONE 'Africa/Cairo') >= %s
+                    GROUP BY 1, size_range
+                    ORDER BY 1;
+                """, (start_day,))
+                rows = cur.fetchall()
 
-    dates = []
-    percents = {cat: [] for cat in categories}
+                # Get last updated timestamp
+                cur.execute("SELECT value FROM meta WHERE key='last_update'")
+                row = cur.fetchone()
+                last_updated = row[0] if row else "No recent data"
 
-    for day in sorted(day_data.keys()):
-        totals = day_data[day]
-        total_count = sum(totals.values())
-        dates.append(day.strftime("%d/%m/%y"))
+        def normalize(sr):
+            sr = sr.lower().replace(" ", "")
+            if sr.startswith("<30"): return "<30mm"
+            if sr.startswith("30") or sr.startswith("30-50"): return "30-50mm"
+            if sr.startswith("50") or sr.startswith("50-80"): return "50-80mm"
+            if sr.startswith("80") or sr.startswith("80-150"): return "80-150mm"
+            if sr.startswith(">") or sr.startswith(">150"): return ">150mm"
+            return None
 
-        for cat in categories:
-            pct = (totals[cat] / total_count * 100) if total_count else 0
-            percents[cat].append(round(pct, 2))
+        # Populate counts
+        for day, sr, total in rows:
+            cat = normalize(sr)
+            if cat and day in day_data:
+                day_data[day][cat] += total
 
-    return jsonify({
-        "dates": dates,
-        "last_updated": last_updated,
-        **percents
-    })
+        # Build response data
+        dates = []
+        percents = {cat: [] for cat in categories}
 
+        for day in sorted(day_data.keys()):
+            totals = day_data[day]
+            total_sum = sum(totals.values())
+            dates.append(day.strftime("%d/%m/%y"))
+
+            for cat in categories:
+                pct = (totals[cat] / total_sum * 100) if total_sum else 0
+                percents[cat].append(round(pct, 2))
+
+        return jsonify({
+            "dates": dates,
+            "last_updated": last_updated,
+            **percents
+        })
+
+    except Exception as e:
+        print("Error in /api/history:", e)
+        return jsonify({"error": "Internal Server Error"}), 500
 
 # ---------------- Daily Trend ----------------
 @api_bp.route('/api/daily-trend')
