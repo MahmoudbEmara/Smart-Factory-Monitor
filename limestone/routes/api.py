@@ -11,26 +11,33 @@ api_bp = Blueprint('api', __name__)
 # ---------------- Dashboard Data ----------------
 @api_bp.route('/dashboard-data')
 def dashboard_data():
-    with get_db_conn() as conn:
-        with conn.cursor() as cursor:
-            cursor.execute(
-                "SELECT node, size_range, SUM(count) FROM realdata GROUP BY node, size_range"
-            )
-            rows = cursor.fetchall()
+    if not session.get("logged_in"):
+        return jsonify({"error": "Unauthorized"}), 403
 
-            cursor.execute("SELECT value FROM meta WHERE key='last_update'")
-            row = cursor.fetchone()
-            last_updated = parser.isoparse(row[0]).isoformat() if row else None
+    conn = get_db()
+    cur = conn.cursor()
 
-    totals = {}
+    # Query totals per size per node
+    cur.execute("""
+        SELECT node, size_range, SUM(count)
+        FROM realdata
+        GROUP BY node, size_range
+        ORDER BY node;
+    """)
+    rows = cur.fetchall()
+
+    # Query latest timestamp (for "Last Updated")
+    cur.execute("SELECT MAX(timestamp) FROM realdata;")
+    last_updated = cur.fetchone()[0]
+
+    cur.close()
+
+    result = {"totals": {}, "last_updated": last_updated}
+
     for node, size, count in rows:
-        totals.setdefault(node, {})
-        totals[node][size] = count
+        result["totals"].setdefault(node, {})[size] = count
 
-    return jsonify({
-        "totals": totals,
-        "last_updated": last_updated
-    })
+    return jsonify(result)
 
 
 # ---------------- Reset Database ----------------
