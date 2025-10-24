@@ -5,6 +5,7 @@ from .routes.update_routes import update_bp
 from .routes.dashboard_routes import dashboard_bp
 from .routes.dailytrend_routes import dailytrend_bp
 from .routes.history_routes import history_bp
+from .routes.api import api_bp
 import os
 
 def create_app():
@@ -26,8 +27,6 @@ def create_app():
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(dailytrend_bp)
     app.register_blueprint(history_bp)
-
-    from .routes.api import api_bp
     app.register_blueprint(api_bp)
 
     return app
