@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Daily Size Distribution Trend</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 0;
+      margin: 0;
+      background: url('/static/imgs/dailytrend.jpg') no-repeat center center fixed;
+      background-size: cover;
+      display: flex;
+      justify-content: center;
+      min-height: 100vh;
+      align-items: flex-start;
+    }
+    .container {
+      background-color: rgba(255, 255, 255, 0.85);
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.2);
+      max-width: 1200px;
+      margin: 40px 20px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    #chart-container {
+      max-width: 1100px;
+      width: 100%;
+      max-height: 900px;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 12px rgba(0,0,0,0.1);
+      overflow: visible;
+    }
+
+    canvas {
+      width: 100% !important;
+      height: 600px !important;
+      display: block;
+    }
+
+    #last-updated {
+      font-style: italic;
+      color: #555;
+      margin-top: 10px;
+      text-align: center;
+    }
+    h1 {
+      margin-bottom: 20px;
+    }
+    .topbar button {
+      margin: 0 5px 20px 0;
+      padding: 8px 15px;
+      border: none;
+      border-radius: 5px;
+      background-color: #4CAF50;
+      color: white;
+      cursor: pointer;
+    }
+    .topbar button:hover {
+      background-color: #45a049;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Size Distribution Trend</h1>
+    <div class="topbar">
+      <button onclick="location.href='/dashboard'">Back to Dashboard</button>
+      <button onclick="location.href='/history'">History</button>
+    </div>
+
+    <div id="chart-container">
+      <canvas id="dailyChart"></canvas>
+    </div>
+    <p id="last-updated"></p>
+  </div>
+
+  <script>
+    let dailyChartInstance = null;
+    let previousTrendDataJSON = null;
+  
+    async function fetchTrendData() {
+      const res = await fetch('/api/daily-trend');
+      return await res.json();
+    }
+  
+    let previousDataHash = null;
+    function isDataChanged(newData) {
+      if (!newData.data_hash || newData.data_hash === previousDataHash) {
+        return false;
+      }
+      previousDataHash = newData.data_hash;
+      return true;
+    }
+  
+    function renderChart(data) {
+      const ctx = document.getElementById('dailyChart').getContext('2d');
+  
+      if (dailyChartInstance) dailyChartInstance.destroy();
+  
+      dailyChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: data.timestamps.map(t => {
+            const dt = new Date(t);
+            return dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          }),
+          datasets: data.datasets.map(ds => ({
+            label: ds.label,
+            data: ds.values,
+            fill: false,
+            borderColor: ds.color,
+            tension: 0.1
+          }))
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'top' },
+            title: {
+              display: true,
+              text: 'Category Percentages Over Time'
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              max: 100,
+              title: { display: true, text: '% of Total Count' }
+            },
+            x: {
+              title: { display: true, text: 'Time (hh:mm)' }
+            }
+          }
+        }
+      });
+    }
+  
+    function updateTrendUIIfChanged(data) {
+      if (isDataChanged(data)) {
+        renderChart(data);
+  
+        if (data.last_updated) {
+          const dt = new Date(data.last_updated);
+          document.getElementById("last-updated").innerText =
+            `Last updated: ${dt.toLocaleString([], {
+              year: "numeric",
+              month: "2-digit",
+              day: "2-digit",
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit"
+            })}`;
+        }
+      }
+    }
+  
+    function pollAndUpdate(url, updateFn, intervalMs) {
+      async function poll() {
+        try {
+          const res = await fetch(url);
+          const data = await res.json();
+          updateFn(data);
+        } catch (err) {
+          console.error("Polling error:", err);
+        }
+        setTimeout(poll, intervalMs);
+      }
+      poll();
+    }
+  
+    window.onload = () => {
+      fetchTrendData().then(data => updateTrendUIIfChanged(data));
+      pollAndUpdate('/api/daily-trend', updateTrendUIIfChanged, 15000);
+    };
+  </script>
+</body>
+</html>
