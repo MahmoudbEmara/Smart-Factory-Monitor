@@ -4,7 +4,7 @@ import os
 
 EGYPT_TZ = timezone.utc  # replace with TIMEZONE !!! after testing
 
-RESET_KEY = os.getenv("RESET_KEY", "default-reset-key")
+RESET_KEY = os.getenv("RESET_KEY")
 
 def get_db_conn():
     return psycopg2.connect(os.getenv("DATABASE_URL"), sslmode="require")
